@@ -71,10 +71,14 @@ void do_work(int fd) {
   int ind = strlen(data[fd]);
   int rsize = 0;
   if ((rsize = recv(fd, buff, sizeof(buff), 0)) < 0) {
-    // 接收到的大小小于0, 代表出现异常, 关闭连接
-    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
-    DBG(RED "<C> : %d is closed.\n" NONE, fd);
-    close(fd);
+    // 如果收到-1, 可能是本次数据已经在上次读取完毕了, 那么此时不能报错,
+    // 只有确认是错误时, 才会关闭
+    if (errno != EAGAIN) {
+      // 接收到的大小小于0, 代表出现异常, 关闭连接
+      epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
+      DBG(RED "<C> : %d is closed.\n" NONE, fd);
+      close(fd);
+    }
     return;
   }
   pthread_mutex_lock(&mutex[fd]);
@@ -87,7 +91,7 @@ void do_work(int fd) {
     } else {
       data[fd][ind++] = buff[i];
       if (buff[i] == '\n') {
-        DBG(GREEN"%s"NONE, data[fd]);
+        DBG(GREEN "%s" NONE, data[fd]);
         DBG(GREEN "<END> : \\n received!\n" NONE);
         send(fd, data[fd], ind, 0);
       }

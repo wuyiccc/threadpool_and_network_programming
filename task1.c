@@ -18,6 +18,11 @@ pthread_mutex_t mutex[MAXCLIENTS];
 // 定义全局变量, 方便其他位置调用
 int epollfd;
 
+
+// 1. push 如果满了会丢弃
+// 2. recv接收数据时, 如果本次数据已经被上次读取了, 返回-1, 需要处理
+// 3. 网络连接字节流乱序
+
 int main(int argc, char **argv) {
   int opt;
   int port = 7777;
