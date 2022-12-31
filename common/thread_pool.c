@@ -5,6 +5,10 @@
 
 #include "head.h"
 
+extern int epollfd;
+extern char *data[2000];
+extern pthread_mutex_t mutex[2000];
+
 void task_queue_init(struct task_queue *taskQueue, int size) {
   taskQueue->size = size;
   taskQueue->total = taskQueue->head = taskQueue->tail = 0;
@@ -23,7 +27,7 @@ void task_queue_push(struct task_queue *taskQueue, void *data) {
   }
 
   taskQueue->data[taskQueue->tail] = data;
-  DBG(GREEN "<push> :" RED "data" NONE "is pushed!\n");
+  DBG(GREEN "<push> :" RED "data " NONE "is pushed!\n");
   taskQueue->tail++;
   taskQueue->total++;
   if (taskQueue->tail == taskQueue->size) {
@@ -58,5 +62,45 @@ void *thread_run(void *arg) {
   while (1) {
     void *data = task_queue_pop(taskQueue);
     printf("%s", (char *)data);
+  }
+}
+
+void do_work(int fd) {
+  char buff[4096] = {0};
+  DBG(BLUE "<R> data is ready on %d.\n" NONE, fd);
+  int ind = strlen(data[fd]);
+  int rsize = 0;
+  if ((rsize = recv(fd, buff, sizeof(buff), 0)) < 0) {
+    // 接收到的大小小于0, 代表出现异常, 关闭连接
+    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
+    DBG(RED "<C> : %d is closed.\n" NONE, fd);
+    close(fd);
+    return;
+  }
+  pthread_mutex_lock(&mutex[fd]);
+  for (int i = 0; i < rsize; i++) {
+    if (buff[i] >= 'A' && buff[i] <= 'Z') {
+      // 大写转小写
+      data[fd][ind++] = buff[i] + 32;
+    } else if (buff[i] >= 'a' && buff[i] <= 'z') {
+      data[fd][ind++] = buff[i] - 32;
+    } else {
+      data[fd][ind++] = buff[i];
+      if (buff[i] == '\n') {
+        DBG(GREEN"%s"NONE, data[fd]);
+        DBG(GREEN "<END> : \\n received!\n" NONE);
+        send(fd, data[fd], ind, 0);
+      }
+    }
+  }
+  pthread_mutex_unlock(&mutex[fd]);
+}
+
+void *worker(void *arg) {
+  pthread_detach(pthread_self());
+  struct task_queue *taskQueue = (struct task_queue *)arg;
+  while (1) {
+    int *fd = (int *)task_queue_pop(taskQueue);
+    do_work(*fd);
   }
 }

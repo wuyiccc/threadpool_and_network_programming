@@ -17,6 +17,10 @@ int socket_create(int port) {
   server.sin_port = htons(port);
   server.sin_addr.s_addr = htonl(INADDR_ANY);  // 监听任意的ip
 
+  // 设置端口复用, 避免出现TIME_WAIT导致端口不可用的情况出现 
+  int reuse = 1;
+  setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(int));
+
   // 将sockfd进行赋值
   if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0) {
     return -1;
@@ -26,4 +30,24 @@ int socket_create(int port) {
     return -1;
   }
   return sockfd;
+}
+
+int make_nonblock(int fd) {
+  int flags;
+  if ((flags = fcntl(fd, F_GETFL)) < 0) {
+    return -1;
+  }
+
+  flags |= O_NONBLOCK;
+  return fcntl(fd, F_SETFL, flags);
+}
+
+int make_block(int fd) {
+  int flags;
+  if ((flags = fcntl(fd, F_GETFL)) < 0) {
+    return -1;
+  }
+
+  flags &= ~O_NONBLOCK;
+  return fcntl(fd, F_SETFL, flags);
 }

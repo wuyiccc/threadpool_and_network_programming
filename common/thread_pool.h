@@ -18,4 +18,5 @@ void task_queue_push(struct task_queue *taskQueue, void *data);
 void *task_queue_pop(struct task_queue *taskQueue);
 
 void *thread_run(void *arg);
+void *worker(void *arg);
 #endif
