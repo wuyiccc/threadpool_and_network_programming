@@ -20,7 +20,7 @@ int add_to_reactor(int epollfd, int fd) {
 void *sub_reactor(void *arg) {
   int subfd = *(int *)arg;
   while (1) {
-    DBG(L_RED"<Sub Reactor>"NONE" : in sub reactor %d\n.", subfd);
+    DBG(L_RED"<Sub Reactor>"NONE" : in sub reactor %d.\n", subfd);
     sleep(30);
   }
 }

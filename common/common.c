@@ -3,6 +3,8 @@
  * @date: 2022-12-30 22:50
  */
 
+#include "common.h"
+
 #include "head.h"
 
 int socket_create(int port) {
@@ -17,7 +19,7 @@ int socket_create(int port) {
   server.sin_port = htons(port);
   server.sin_addr.s_addr = htonl(INADDR_ANY);  // 监听任意的ip
 
-  // 设置端口复用, 避免出现TIME_WAIT导致端口不可用的情况出现 
+  // 设置端口复用, 避免出现TIME_WAIT导致端口不可用的情况出现
   int reuse = 1;
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(int));
 
@@ -27,6 +29,24 @@ int socket_create(int port) {
   }
 
   if (listen(sockfd, 20) < 0) {
+    return -1;
+  }
+  return sockfd;
+}
+
+int socket_connect(const char *ip, int port) { 
+  int sockfd;
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    return -1;
+  }
+
+  struct sockaddr_in server;
+  bzero(&server, sizeof(server));
+  server.sin_family = AF_INET;
+  server.sin_port = htons(port);
+  server.sin_addr.s_addr = inet_addr(ip);
+
+  if (connect(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0) {
     return -1;
   }
   return sockfd;
