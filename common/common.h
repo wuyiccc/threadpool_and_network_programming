@@ -9,4 +9,6 @@
 int socket_create(int port);
 int make_nonblock(int fd);
 int make_block(int fd);
+char *get_conf_value(const char *file, const char *key);
+char ans[512];
 #endif

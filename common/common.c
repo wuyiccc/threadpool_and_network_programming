@@ -51,3 +51,37 @@ int make_block(int fd) {
   flags &= ~O_NONBLOCK;
   return fcntl(fd, F_SETFL, flags);
 }
+
+// 读取配置文件
+char *get_conf_value(const char *file, const char *key) {
+  FILE *fp;
+  if ((fp = fopen(file, "r")) == NULL) {
+    return NULL;
+  }
+
+  char *line = NULL;
+  ssize_t len = 0;
+  ssize_t nread = 0;
+  char *sub = NULL;
+  // 初始化ans
+  bzero(ans, sizeof(ans));
+  while ((nread = getline(&line, &len, fp)) != -1) {
+    if ((sub = strstr(line, key)) == NULL) {
+      continue;
+    }
+    // 如果key出现在行首, 且下一个字符是=
+    if (sub == line && line[strlen(key)] == '=') {
+      strcpy(ans, line + strlen(key) + 1);
+      // 如果最后一个字符是回车, 那么将回车替换成终止符
+      if (ans[strlen(ans) - 1] == '\n') {
+        ans[strlen(ans) - 1] = '\0';
+      }
+    }
+  }
+  if (!strlen(ans)) {
+    return NULL;
+  }
+  fclose(fp);
+  free(line);
+  return ans;
+}

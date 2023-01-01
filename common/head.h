@@ -32,6 +32,7 @@
 #include "color.h"
 #include "thread_pool.h"
 #include "common.h"
+#include "wechat.h"
 #ifdef _D
 #define DBG(fmt, args...) printf(fmt, ##args)
 #else
