@@ -64,6 +64,68 @@ int main(int argc, char **argv) {
     perror("socket_connect");
     exit(1);
   }
-  DBG(YELLOW"<D>"NONE" : connection to server %s:%d --> <%d> successfully.\n", server_ip, server_port, sockfd);
+  DBG(YELLOW "<D>" NONE
+             " : connection to server %s:%d --> <%d> successfully.\n",
+      server_ip, server_port, sockfd);
+
+  struct wechat_msg msg;
+  bzero(&msg, sizeof(msg));
+  strcpy(msg.from, name);
+  if (mode == 0) {
+    msg.type = WECHAT_SIGUP;
+  } else {
+    msg.type = WECHAT_SIGIN;
+  }
+  send(sockfd, (void *)&msg, sizeof(msg), 0);
+
+  // select模型
+  fd_set rfds;
+  FD_ZERO(&rfds);
+  FD_SET(sockfd, &rfds);
+  struct timeval tv;
+  tv.tv_sec = 2;
+  tv.tv_usec = 0;
+
+  // 关注可读的文件
+  if (select(sockfd + 1, &rfds, NULL, NULL, &tv) <= 0) {
+    fprintf(stderr, RED "<SystemErr>" NONE " : server is out of service.\n");
+    exit(1);
+  }
+
+  bzero(&msg, sizeof(msg));
+  int ret = recv(sockfd, (void *)&msg, sizeof(msg), 0);
+  if (ret <= 0) {
+    fprintf(stderr, RED "<SystemErr>" NONE " : Server closed connection.\n");
+    exit(1);
+  }
+
+  if (msg.type & WECHAT_ACK) {
+    DBG(GREEN "<Succeess>" NONE " : server return a success.\n");
+    if (!mode) {
+      printf(GREEN "Please login after this.\n" NONE);
+      exit(0);
+    }
+  } else {
+    DBG(RED "<Failure>" NONE " : server return a failure.\n");
+    exit(1);
+  }
+
+  DBG(BLUE "<D>" NONE " : login success\n");
+
+  pthread_t tid;
+  pthread_create(&tid, NULL, client_recv, (void *)&sockfd);
+
+  while (1) {
+    printf("Please Input:\n");
+    char buff[1024] = {0};
+    scanf("%[^\n]", buff);
+    getchar();
+    if (!strlen(buff)) {
+      continue;
+    }
+    msg.type = WECHAT_WALL;
+    strcpy(msg.msg, buff);
+    send(sockfd, (void *)&msg, sizeof(msg), 0);
+  }
   return 0;
 }

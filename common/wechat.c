@@ -4,6 +4,7 @@
  */
 
 #include "head.h"
+#include "wechat.h"
 
 int add_to_reactor(int epollfd, int fd) {
   struct epoll_event ev;
@@ -16,6 +17,17 @@ int add_to_reactor(int epollfd, int fd) {
   }
   return 0;
 }
+
+void *client_recv(void *arg) {
+  int sockfd = *(int *)arg;
+  struct wechat_msg msg;
+  while (1) {
+    bzero(&msg, sizeof(msg));
+    int ret = recv(sockfd, &msg, sizeof(msg), 0);
+    printf("%s : %s\n", msg.from, msg.msg);
+  }
+}
+
 
 void *sub_reactor(void *arg) {
   int subfd = *(int *)arg;

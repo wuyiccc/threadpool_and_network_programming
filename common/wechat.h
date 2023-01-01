@@ -37,4 +37,5 @@ struct wechat_msg {
 };
 void *sub_reactor(void *arg);
 int add_to_reactor(int efd, int fd);
+void *client_recv(void *arg);
 #endif
