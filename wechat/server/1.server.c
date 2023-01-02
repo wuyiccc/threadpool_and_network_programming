@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
           printf("recv msg: %s\n", msg.msg);
           strcpy(users[fd].name, msg.from);
           users[fd].fd = fd;
-          users[fd].isOnline = 1;
+          users[fd].isOnline = 5;
           users[fd].sex = msg.sex;
           int which = msg.sex ? subefd1 : subefd2;
           // 从主反应堆剔除fd
