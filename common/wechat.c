@@ -22,8 +22,17 @@ int add_to_reactor(int epollfd, int fd) {
 
 void send_all(struct wechat_msg *msg) {
   for (int i = 0; i < MAXUSERS; i++) {
+    if (users[i].isOnline) {
+      send(users[i].fd, msg, sizeof(struct wechat_msg), 0);
+    }
+  }
+  return;
+}
+
+void send_all_not_me(struct wechat_msg *msg) {
+  for (int i = 0; i < MAXUSERS; i++) {
     if (users[i].isOnline && strcmp(users[i].name, msg->from)) {
-      send(users[i].fd, msg, sizeof(msg), 0);
+      send(users[i].fd, msg, sizeof(struct wechat_msg), 0);
     }
   }
   return;
@@ -48,7 +57,7 @@ void *sub_reactor(void *arg) {
       bzero(&msg, sizeof(msg));
       int ret = recv(fd, (void *)&msg, sizeof(msg), 0);
       DBG(YELLOW "<in sub reactor loop: event after recv>\n" NONE);
-      if (ret <= 0 && (errno != EAGAIN)) {
+      if (ret < 0 && !(errno & EAGAIN)) {
         // 异常情况
         close(fd);
         epoll_ctl(subfd, EPOLL_CTL_DEL, fd, NULL);
@@ -66,7 +75,8 @@ void *sub_reactor(void *arg) {
         continue;
       }
       if (msg.type & WECHAT_WALL) {
-        show_msg(&msg);
+        // show_msg(&msg);
+        printf("recv msg: from: %s, msg: %s\n", msg.from, msg.msg);
         DBG(BLUE "%s : %s\n" NONE, msg.from, msg.msg);
         send_all(&msg);
       } else {
@@ -82,15 +92,15 @@ void *client_recv(void *arg) {
   int sockfd = *(int *)arg;
   struct wechat_msg msg;
   while (1) {
-    bzero(&msg, sizeof(msg));
     DBG("IN client_recv <%d>\n", sockfd);
+    bzero(&msg, sizeof(msg));
     int ret = recv(sockfd, &msg, sizeof(msg), 0);
     DBG("After recv\n");
-    if (ret < 0) {
+    if (ret <= 0) {
       DBG(RED "<Err>" NONE " : server cloesed connection.\n");
       perror("recv");
       exit(1);
     }
-    printf("%s : %s\n", msg.from, msg.msg);
+    printf("msg from: %s, msg: %s\n", msg.from, msg.msg);
   }
 }

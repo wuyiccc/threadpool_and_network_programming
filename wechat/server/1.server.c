@@ -5,7 +5,6 @@
 
 #include "head.h"
 
-WINDOW *msg_win, *sub_msg_win, *info_win, *sub_info_win, *input_win, *sub_input_win;
 // 基于当前目录(程序运行目录)的相对路径
 const char *config = "./wechatd.conf";
 struct wechat_user *users;
@@ -36,11 +35,6 @@ int main(int argc, char **argv) {
     DBG("port = %d!\n", port);
   }
   DBG(YELLOW "<D>" NONE " : config file read success.\n");
-
-  #ifdef UI
-  setlocale(LC_ALL, "");
-  init_ui();
-  #endif
 
   // 2. 设置socket监听指定端口
   int server_listen;
@@ -120,17 +114,18 @@ int main(int argc, char **argv) {
           DBG(RED "<MsgErr>" NONE " : msg size err!\n");
           continue;
         }
-        if (msg.type & WECHAT_SIGUP) {
+        if (msg.type & WECHAT_SIGNUP) {
           // 注册用户, 更新用户信息到文件中, 判断是否可以注册
           msg.type = WECHAT_ACK;
           send(fd, (void *)&msg, sizeof(msg), 0);
-        } else if (msg.type & WECHAT_SIGIN) {
+        } else if (msg.type & WECHAT_SIGNIN) {
           // 登录, 判断密码是否正确, 验证用户是否重复登录
           // 加到从反应堆中
           msg.type = WECHAT_ACK;
           send(fd, (void *)&msg, sizeof(msg), 0);
           strcpy(msg.msg, "你已登录成功!\n");
-          show_msg(&msg);
+          // show_msg(&msg);
+          printf("recv msg: %s\n", msg.msg);
           strcpy(users[fd].name, msg.from);
           users[fd].fd = fd;
           users[fd].isOnline = 1;

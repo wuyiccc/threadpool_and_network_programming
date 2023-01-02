@@ -34,7 +34,7 @@ int socket_create(int port) {
   return sockfd;
 }
 
-int socket_connect(const char *ip, int port) { 
+int socket_connect(const char *ip, int port) {
   int sockfd;
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     return -1;
@@ -98,10 +98,10 @@ char *get_conf_value(const char *file, const char *key) {
       }
     }
   }
+  fclose(fp);
+  free(line);
   if (!strlen(ans)) {
     return NULL;
   }
-  fclose(fp);
-  free(line);
   return ans;
 }
