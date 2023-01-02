@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "head.h": "c"
+        "head.h": "c",
+        "wechat.h": "c"
     }
 }

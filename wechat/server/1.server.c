@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if ((subefd1 = epoll_create(1)) < 0) {
+  if ((subefd2 = epoll_create(1)) < 0) {
     perror("epoll_create");
     exit(1);
   }
@@ -128,6 +128,7 @@ int main(int argc, char **argv) {
           users[fd].isOnline = 1;
           users[fd].sex = msg.sex;
           int which = msg.sex ? subefd1 : subefd2;
+          epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
           add_to_reactor(which, fd);
         } else {
           // 报文数据有误

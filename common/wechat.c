@@ -2,11 +2,10 @@
  * @author: wuyiccc
  * @date: 2023-01-01 17:19
  */
-
-#include "wechat.h"
-
 #include "head.h"
 
+// _CLI宏定义用来区分客户端与服务端的定义代码
+#ifndef _CLI
 extern struct wechat_user *users;
 
 int add_to_reactor(int epollfd, int fd) {
@@ -21,14 +20,13 @@ int add_to_reactor(int epollfd, int fd) {
   return 0;
 }
 
-void *client_recv(void *arg) {
-  int sockfd = *(int *)arg;
-  struct wechat_msg msg;
-  while (1) {
-    bzero(&msg, sizeof(msg));
-    int ret = recv(sockfd, &msg, sizeof(msg), 0);
-    printf("%s : %s\n", msg.from, msg.msg);
+void send_all(struct wechat_msg *msg) {
+  for (int i = 0; i < MAXUSERS; i++) {
+    if (users[i].isOnline && strcmp(users[i].name, msg->from)) {
+      send(users[i].fd, msg, sizeof(msg), 0);
+    }
   }
+  return;
 }
 
 void *sub_reactor(void *arg) {
@@ -36,6 +34,7 @@ void *sub_reactor(void *arg) {
   DBG(L_RED "<Sub Reactor>" NONE " : in sub reactor %d.\n", subfd);
   struct epoll_event ev, events[MAXEVENTS];
   for (;;) {
+    DBG(YELLOW "<in sub reactor loop: start>\n" NONE);
     // -1 代表永久无期限阻塞
     int nfds = epoll_wait(subfd, events, MAXEVENTS, -1);
     if (nfds < 0) {
@@ -43,26 +42,54 @@ void *sub_reactor(void *arg) {
       continue;
     }
     for (int i = 0; i < nfds; i++) {
+      DBG(YELLOW "<in sub reactor loop: for each event>\n" NONE);
       int fd = events[i].data.fd;
       struct wechat_msg msg;
       bzero(&msg, sizeof(msg));
       int ret = recv(fd, (void *)&msg, sizeof(msg), 0);
-      if (ret <= 0 && errno != EAGAIN) {
+      DBG(YELLOW "<in sub reactor loop: event after recv>\n" NONE);
+      if (ret <= 0 && (errno != EAGAIN)) {
         // 异常情况
         close(fd);
         epoll_ctl(subfd, EPOLL_CTL_DEL, fd, NULL);
         users[fd].isOnline = 0;
-        DBG(L_RED"<Sub Reactor Err> : connection of %d on %d is closed.\n"NONE, fd, subfd);
+        DBG(L_RED
+            "<Sub Reactor Err> : connection of %d on %d is closed.\n" NONE,
+            fd, subfd);
         continue;
       }
       if (ret != sizeof(msg)) {
         // 如果收到的消息大小与期望大小不一致
-        DBG(L_RED"<Sub Reactor Err> : msg size err.\n"NONE);
+        DBG(L_RED "<Sub Reactor Err> : msg size err <%ld, %d>.\n" NONE,
+            sizeof(msg), ret);
+        perror("recv");
         continue;
       }
       if (msg.type & WECHAT_WALL) {
-        DBG(BLUE"%s : %s\n", msg.from, msg.msg);
+        DBG(BLUE "%s : %s\n" NONE, msg.from, msg.msg);
+        send_all(&msg);
+      } else {
+        DBG(PINK "%s : %s\n" NONE, msg.from, msg.msg);
       }
     }
+  }
+}
+
+#endif
+
+void *client_recv(void *arg) {
+  int sockfd = *(int *)arg;
+  struct wechat_msg msg;
+  while (1) {
+    bzero(&msg, sizeof(msg));
+    DBG("IN client_recv <%d>\n", sockfd);
+    int ret = recv(sockfd, &msg, sizeof(msg), 0);
+    DBG("After recv\n");
+    if (ret < 0) {
+      DBG(RED "<Err>" NONE " : server cloesed connection.\n");
+      perror("recv");
+      exit(1);
+    }
+    printf("%s : %s\n", msg.from, msg.msg);
   }
 }
