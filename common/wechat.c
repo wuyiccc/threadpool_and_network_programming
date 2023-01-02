@@ -21,7 +21,9 @@ void heart_beat(int signum) {
         int tmp_fd = users[i].sex ? subefd1 : subefd2;
         epoll_ctl(tmp_fd, EPOLL_CTL_DEL, users[i].fd, NULL);
         close(users[i].fd);
-        DBG(RED"<Heart Beat Err>"NONE" %s is removed because of heart beat error.\n", users[i].name);
+        DBG(RED "<Heart Beat Err>" NONE
+                " %s is removed because of heart beat error.\n",
+            users[i].name);
       }
     }
   }
