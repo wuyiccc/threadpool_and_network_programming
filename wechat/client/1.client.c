@@ -6,15 +6,26 @@
 #include "head.h"
 const char *config = "./wechat.conf";
 
+int sockfd;
+char name[50] = {0};
+
+void logout(int signum) {
+  struct wechat_msg msg;
+  msg.type = WECHAT_FIN;
+  stpcpy(msg.from, name);
+  send(sockfd, (void *)&msg, sizeof(msg), 0);
+  close(sockfd);
+  printf(YELLOW "Bye!\n" NONE);
+  exit(0);
+}
+
 int main(int argc, char **argv) {
   int opt;
   int server_port = 0;
   int sex = 1;
-  int sockfd;
   int mode = 0;
 
   char server_ip[20] = {0};
-  char name[50] = {0};
   while ((opt = getopt(argc, argv, "p:h:s:n:m:")) != -1) {
     switch (opt) {
       case 'p':
@@ -67,6 +78,8 @@ int main(int argc, char **argv) {
   DBG(YELLOW "<D>" NONE
              " : connection to server %s:%d --> <%d> successfully.\n",
       server_ip, server_port, sockfd);
+
+  signal(SIGINT, logout);
 
   struct wechat_msg msg;
   bzero(&msg, sizeof(msg));
@@ -125,6 +138,9 @@ int main(int argc, char **argv) {
     }
     msg.type = WECHAT_WALL;
     strcpy(msg.msg, buff);
+    // if (msg.msg[0] == '@') {
+    //   msg.type = WECHAT_MSG;
+    // }
     send(sockfd, (void *)&msg, sizeof(msg), 0);
   }
   return 0;

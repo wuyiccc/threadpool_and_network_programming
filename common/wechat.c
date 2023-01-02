@@ -106,6 +106,13 @@ void *sub_reactor(void *arg) {
         send_all(&msg);
       } else if (msg.type & WECHAT_HEART && msg.type & WECHAT_ACK) {
         DBG(RED " ack for 心跳\n" NONE);
+      } else if (msg.type & WECHAT_FIN) {
+        msg.type = WECHAT_SYS;
+        sprintf(msg.msg, "你的好友 %s 已经下线了.\n", msg.from);
+        send_all_not_me(&msg);
+        epoll_ctl(subfd, EPOLL_CTL_DEL, fd, NULL);
+        close(fd);
+        users[fd].isOnline = 0;
       } else {
         DBG(PINK "%s : %s\n" NONE, msg.from, msg.msg);
       }
