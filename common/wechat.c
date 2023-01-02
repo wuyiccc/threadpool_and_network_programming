@@ -59,6 +59,16 @@ void send_all_not_me(struct wechat_msg *msg) {
   return;
 }
 
+void send_to(struct wechat_msg *msg) {
+  for (int i = 0; i < MAXUSERS; i++) {
+    if (users[i].isOnline && !strcmp(users[i].name, msg->to)) {
+      DBG(YELLOW "成功发送一条私聊信息,  to: %s\n", users[i].name);
+      send(users[i].fd, msg, sizeof(struct wechat_msg), 0);
+      break;
+    }
+  }
+}
+
 void *sub_reactor(void *arg) {
   int subfd = *(int *)arg;
   DBG(L_RED "<Sub Reactor>" NONE " : in sub reactor %d.\n", subfd);
@@ -113,6 +123,9 @@ void *sub_reactor(void *arg) {
         epoll_ctl(subfd, EPOLL_CTL_DEL, fd, NULL);
         close(fd);
         users[fd].isOnline = 0;
+      } else if (msg.type & WECHAT_MSG) {
+        DBG(YELLOW "发送私聊信息, from: %s, to: %s\n" NONE, msg.from, msg.to);
+        send_to(&msg);
       } else {
         DBG(PINK "%s : %s\n" NONE, msg.from, msg.msg);
       }

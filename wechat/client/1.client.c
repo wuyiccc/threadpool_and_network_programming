@@ -138,9 +138,14 @@ int main(int argc, char **argv) {
     }
     msg.type = WECHAT_WALL;
     strcpy(msg.msg, buff);
-    // if (msg.msg[0] == '@') {
-    //   msg.type = WECHAT_MSG;
-    // }
+    if (msg.msg[0] == '@') {
+      if (!strstr(msg.msg, " ")) {
+        printf("输入格式有误!\n");
+        continue;
+      }
+      msg.type = WECHAT_MSG;
+      strncpy(msg.to, msg.msg + 1, strchr(msg.msg, ' ') - msg.msg - 1);
+    }
     send(sockfd, (void *)&msg, sizeof(msg), 0);
   }
   return 0;
