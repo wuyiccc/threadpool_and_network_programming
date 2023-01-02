@@ -66,6 +66,7 @@ void *sub_reactor(void *arg) {
         continue;
       }
       if (msg.type & WECHAT_WALL) {
+        show_msg(&msg);
         DBG(BLUE "%s : %s\n" NONE, msg.from, msg.msg);
         send_all(&msg);
       } else {

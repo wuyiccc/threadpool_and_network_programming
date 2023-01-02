@@ -4,7 +4,7 @@
  */
 
 #include "head.h"
-
+WINDOW *msg_win, *sub_msg_win, *info_win, *sub_info_win, *input_win, *sub_input_win;
 const char *config = "./wechat.conf";
 
 int main(int argc, char **argv) {
@@ -60,6 +60,12 @@ int main(int argc, char **argv) {
   DBG(YELLOW "<D>" NONE " : read config success.\n");
   DBG(BLUE "<D>" NONE " : server_ip = %s\n", server_ip);
   DBG(BLUE "<D>" NONE " : server_port = %d\n", server_port);
+
+  #ifdef UI
+  setlocale(LC_ALL, "");
+  init_ui();
+  #endif
+
   if ((sockfd = socket_connect(server_ip, server_port)) < 0) {
     perror("socket_connect");
     exit(1);
@@ -116,16 +122,24 @@ int main(int argc, char **argv) {
   pthread_create(&tid, NULL, client_recv, (void *)&sockfd);
 
   while (1) {
-    printf("Please Input:\n");
-    char buff[1024] = {0};
-    scanf("%[^\n]", buff);
-    getchar();
-    if (!strlen(buff)) {
+    bzero(&msg.msg, sizeof(msg.msg));
+    // 显示在UI页面
+    echo();
+    // 必须按回车才能提交
+    nocbreak();
+    // 第2行第一列
+    mvwscanw(input_win, 2, 1, "%[^\n]", msg.msg);
+    msg.type = WECHAT_WALL;
+    if (!strlen(msg.msg)) {
       continue;
     }
-    msg.type = WECHAT_WALL;
-    strcpy(msg.msg, buff);
     send(sockfd, (void *)&msg, sizeof(msg), 0);
+    // 清空输入窗口
+    wclear(input_win);
+    // 重新定位到(0,0)
+    box(input_win, 0, 0);
+    noecho();
+    cbreak;
   }
   return 0;
 }

@@ -5,6 +5,7 @@
 
 #include "head.h"
 
+WINDOW *msg_win, *sub_msg_win, *info_win, *sub_info_win, *input_win, *sub_input_win;
 // 基于当前目录(程序运行目录)的相对路径
 const char *config = "./wechatd.conf";
 struct wechat_user *users;
@@ -35,6 +36,11 @@ int main(int argc, char **argv) {
     DBG("port = %d!\n", port);
   }
   DBG(YELLOW "<D>" NONE " : config file read success.\n");
+
+  #ifdef UI
+  setlocale(LC_ALL, "");
+  init_ui();
+  #endif
 
   // 2. 设置socket监听指定端口
   int server_listen;
@@ -123,6 +129,8 @@ int main(int argc, char **argv) {
           // 加到从反应堆中
           msg.type = WECHAT_ACK;
           send(fd, (void *)&msg, sizeof(msg), 0);
+          strcpy(msg.msg, "你已登录成功!\n");
+          show_msg(&msg);
           strcpy(users[fd].name, msg.from);
           users[fd].fd = fd;
           users[fd].isOnline = 1;

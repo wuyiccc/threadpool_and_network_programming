@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "head.h": "c",
-        "wechat.h": "c"
+        "wechat.h": "c",
+        "thread_pool.h": "c",
+        "ncurses.h": "c"
     }
 }

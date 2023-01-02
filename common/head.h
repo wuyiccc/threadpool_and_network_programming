@@ -29,10 +29,13 @@
 #include <grp.h>
 #include <ctype.h>
 #include <dirent.h>
+#include <ncurses.h>
+#include <locale.h>
 #include "color.h"
 #include "thread_pool.h"
 #include "common.h"
 #include "wechat.h"
+#include "wechat_ui.h"
 #ifdef _D
 #define DBG(fmt, args...) printf(fmt, ##args)
 #else
