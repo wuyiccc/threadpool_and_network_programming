@@ -35,6 +35,7 @@ struct wechat_msg {
   char to[50];
   char msg[512];
 };
+void heart_beat(int signum);
 void *sub_reactor(void *arg);
 int add_to_reactor(int efd, int fd);
 void *client_recv(void *arg);

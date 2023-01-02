@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <locale.h>
+#include <sys/time.h>
 #include "color.h"
 #include "thread_pool.h"
 #include "common.h"

@@ -7,6 +7,25 @@
 // _CLI宏定义用来区分客户端与服务端的定义代码
 #ifndef _CLI
 extern struct wechat_user *users;
+extern int subefd1, subefd2, epollfd;
+
+void heart_beat(int signum) {
+  struct wechat_msg msg;
+  msg.type = WECHAT_HEART;
+  DBG(GREEN "SIGALRM\n" NONE);
+  for (int i = 0; i < MAXUSERS; i++) {
+    if (users[i].isOnline) {
+      send(users[i].fd, (void *)&msg, sizeof(msg), 0);
+      users[i].isOnline--;
+      if (users[i].isOnline == 0) {
+        int tmp_fd = users[i].sex ? subefd1 : subefd2;
+        epoll_ctl(tmp_fd, EPOLL_CTL_DEL, users[i].fd, NULL);
+        close(users[i].fd);
+        DBG(RED"<Heart Beat Err>"NONE" %s is removed because of heart beat error.\n", users[i].name);
+      }
+    }
+  }
+}
 
 int add_to_reactor(int epollfd, int fd) {
   struct epoll_event ev;
@@ -45,7 +64,10 @@ void *sub_reactor(void *arg) {
   for (;;) {
     DBG(YELLOW "<in sub reactor loop: start>\n" NONE);
     // -1 代表永久无期限阻塞
-    int nfds = epoll_wait(subfd, events, MAXEVENTS, -1);
+    sigset_t sigset;
+    sigemptyset(&sigset);
+    sigaddset(&sigset, SIGALRM);
+    int nfds = epoll_pwait(subfd, events, MAXEVENTS, -1, &sigset);
     if (nfds < 0) {
       DBG(L_RED "<Sub Reactor Err> : sub reactor error %d.\n" NONE, subfd);
       continue;
@@ -74,11 +96,14 @@ void *sub_reactor(void *arg) {
         perror("recv");
         continue;
       }
+      users[fd].isOnline = 5;
       if (msg.type & WECHAT_WALL) {
         // show_msg(&msg);
         printf("recv msg: from: %s, msg: %s\n", msg.from, msg.msg);
         DBG(BLUE "%s : %s\n" NONE, msg.from, msg.msg);
         send_all(&msg);
+      } else if (msg.type & WECHAT_HEART && msg.type & WECHAT_ACK) {
+        DBG(RED " ack for 心跳\n" NONE);
       } else {
         DBG(PINK "%s : %s\n" NONE, msg.from, msg.msg);
       }
@@ -101,6 +126,14 @@ void *client_recv(void *arg) {
       perror("recv");
       exit(1);
     }
-    printf("msg from: %s, msg: %s\n", msg.from, msg.msg);
+    if (msg.type & WECHAT_HEART) {
+      struct wechat_msg ack;
+      ack.type = WECHAT_ACK | WECHAT_HEART;
+      send(sockfd, (void *)&ack, sizeof(ack), 0);
+      strcpy(msg.msg, RED "心跳" NONE);
+      printf("recv heart beat: msg: %s\n", msg.msg);
+    } else {
+      printf("msg from: %s, msg: %s\n", msg.from, msg.msg);
+    }
   }
 }

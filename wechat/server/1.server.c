@@ -8,6 +8,9 @@
 // 基于当前目录(程序运行目录)的相对路径
 const char *config = "./wechatd.conf";
 struct wechat_user *users;
+int epollfd;
+int subefd1;
+int subefd2;
 
 int main(int argc, char **argv) {
   // 1. 读取命令行参数/或者配置文件的的port设置
@@ -45,13 +48,23 @@ int main(int argc, char **argv) {
 
   DBG(YELLOW "<D>" NONE " : server_listen is listening on port %d.\n", port);
 
+  struct itimerval itv;
+  // 间隔时间
+  itv.it_interval.tv_sec = 10;
+  itv.it_interval.tv_usec = 0;
+  // 初始时间
+  itv.it_value.tv_sec = 10;
+  itv.it_value.tv_usec = 0;
+  // 每隔2s释放时钟信号
+  setitimer(ITIMER_REAL, &itv, NULL);
+
+  // 同时会中断sleep函数的调用
+  signal(SIGALRM, heart_beat);
+
   // 初始化用户资源
   users = (struct wechat_user *)calloc(MAXUSERS, sizeof(struct wechat_user));
 
   int sockfd;
-  int epollfd;
-  int subefd1;
-  int subefd2;
 
   if ((epollfd = epoll_create(1)) < 0) {
     perror("epoll_create");
@@ -83,7 +96,12 @@ int main(int argc, char **argv) {
   epoll_ctl(epollfd, EPOLL_CTL_ADD, server_listen, &ev);
 
   for (;;) {
-    int nfds = epoll_wait(epollfd, events, MAXEVENTS, -1);
+    // 信号掩码
+    sigset_t sigset;
+    sigemptyset(&sigset);
+    sigaddset(&sigset, SIGALRM);
+    // 使用epoll_wait防止被中断
+    int nfds = epoll_pwait(epollfd, events, MAXEVENTS, -1, &sigset);
     if (nfds < 0) {
       perror("epoll_wait");
       exit(1);
