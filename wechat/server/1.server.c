@@ -136,6 +136,7 @@ int main(int argc, char **argv) {
           users[fd].isOnline = 1;
           users[fd].sex = msg.sex;
           int which = msg.sex ? subefd1 : subefd2;
+          // 从主反应堆剔除fd
           epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
           add_to_reactor(which, fd);
         } else {
